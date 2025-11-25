@@ -15,7 +15,7 @@ export interface Order {
 export interface OrderMeta {
   day: string;
 }
-const PHONE_NUMBER = "18097898010"; // Dominican Republic country code 1 + area code 809
+const PHONE_NUMBER = "18097891080"; // Dominican Republic country code 1 + area code 809
 /**
  * Builds a formatted, human-readable WhatsApp message from an order object.
  * @param order The customer's order.

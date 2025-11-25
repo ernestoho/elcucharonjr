@@ -144,7 +144,7 @@ export function HomePage() {
             transition={{ duration: 0.6, ease: "easeOut" }}
             className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-foreground"
           >
-            SazónLink
+            El Cucharon JR
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -196,7 +196,7 @@ export function HomePage() {
         />
       </div>
       <footer className="py-8 text-center text-muted-foreground/80">
-        <p>Built with ❤�� at Cloudflare</p>
+        <p>Built with ❤️ at Cloudflare</p>
       </footer>
       <Toaster richColors closeButton />
     </div>

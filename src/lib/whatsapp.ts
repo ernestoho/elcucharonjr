@@ -23,7 +23,7 @@ const PHONE_NUMBER = "18097898010"; // Dominican Republic country code 1 + area 
  * @returns A formatted string ready for WhatsApp.
  *
  * Example:
- * *Pedido SazónLink - Lunes*
+ * *Pedido El Cucharon JR - Lunes*
  * --------------------
  * *Platos:*
  * - 1x Cerdo Guisado Criollo
@@ -40,7 +40,7 @@ const PHONE_NUMBER = "18097898010"; // Dominican Republic country code 1 + area 
  */
 export function buildWhatsAppMessage(order: Order, meta: OrderMeta): string {
   const parts: string[] = [];
-  parts.push(`*Pedido SazónLink - ${meta.day}*`);
+  parts.push(`*Pedido El Cucharon JR - ${meta.day}*`);
   parts.push("--------------------");
   if (order.items.length > 0) {
     parts.push("*Platos:*");

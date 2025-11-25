@@ -7,7 +7,7 @@ export interface OrderItem {
 }
 export interface Order {
   items: OrderItem[];
-  guarniciones?: OrderItem[];
+  guarnicion: string | null;
   extras: OrderItem[];
   juices: OrderItem[];
   total: number;
@@ -15,7 +15,7 @@ export interface Order {
 export interface OrderMeta {
   day: string;
 }
-const PHONE_NUMBER = "18097891080"; // Dominican Republic country code 1 + area code 809
+const PHONE_NUMBER = "18097898010"; // Dominican Republic country code 1 + area code 809
 /**
  * Builds a formatted, human-readable WhatsApp message from an order object.
  * @param order The customer's order.
@@ -23,24 +23,26 @@ const PHONE_NUMBER = "18097891080"; // Dominican Republic country code 1 + area 
  * @returns A formatted string ready for WhatsApp.
  *
  * Example:
- * *Pedido El Cucharon JR - Lunes*
+ * *Pedido SazónLink - Lunes*
  * --------------------
  * *Platos:*
  * - 1x Cerdo Guisado Criollo
  * --------------------
- * *Guarniciones:*
- * - Arroz: Arroz con Maíz
- * - Crema: Habichuelas Rojas
+ * *Guarnición:*
+ * - Arroz con Maíz
  * --------------------
  * *Extras:*
  * - 2x Tostones
+ * --------------------
+ * *Jugos:*
+ * - 1x Cereza
  * --------------------
  * *Total: RD$ 550*
  * (Pedido generado: 2024-08-12 14:30)
  */
 export function buildWhatsAppMessage(order: Order, meta: OrderMeta): string {
   const parts: string[] = [];
-  parts.push(`*Pedido El Cucharon JR - ${meta.day}*`);
+  parts.push(`*Pedido SazónLink - ${meta.day}*`);
   parts.push("--------------------");
   if (order.items.length > 0) {
     parts.push("*Platos:*");
@@ -49,11 +51,9 @@ export function buildWhatsAppMessage(order: Order, meta: OrderMeta): string {
     });
     parts.push("--------------------");
   }
-  if (order.guarniciones && order.guarniciones.length > 0) {
-    parts.push("*Guarniciones:*");
-    order.guarniciones.forEach(item => {
-      parts.push(`- ${item.name}`);
-    });
+  if (order.guarnicion) {
+    parts.push("*Guarnición:*");
+    parts.push(`- ${order.guarnicion}`);
     parts.push("--------------------");
   }
   if (order.extras.length > 0) {

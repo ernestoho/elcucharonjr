@@ -1,8 +1,10 @@
-import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Image } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 export type MenuItem = {
   id: string;
   name: string;
@@ -21,6 +23,9 @@ interface MenuTabsProps {
   menu: Record<string, MenuCategory>;
   orderQuantities: Record<string, number>;
   onQuantityChange: (itemId: string, newQuantity: number) => void;
+  guarnicion: string | null;
+  onGuarnicionChange: (value: string) => void;
+  guarniciones: MenuItem[];
 }
 export function MenuTabs({
   days,
@@ -29,6 +34,9 @@ export function MenuTabs({
   menu,
   orderQuantities,
   onQuantityChange,
+  guarnicion,
+  onGuarnicionChange,
+  guarniciones
 }: MenuTabsProps) {
   return (
     <Tabs value={selectedDay} onValueChange={onDayChange} className="w-full">
@@ -54,6 +62,23 @@ export function MenuTabs({
               </div>
             </div>
           ))}
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Guarniciones</h2>
+            <p className="text-muted-foreground mb-4">Elige una guarnición para acompañar tu plato del día.</p>
+            <Select onValueChange={onGuarnicionChange} value={guarnicion ?? undefined}>
+              <SelectTrigger className="w-full md:w-[280px]">
+                <SelectValue placeholder="Selecciona una guarnición" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Opciones</SelectLabel>
+                  {guarniciones.map(g => (
+                    <SelectItem key={g.id} value={g.name}>{g.name}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         </TabsContent>
       ))}
     </Tabs>
@@ -64,82 +89,28 @@ interface MenuItemCardProps {
   quantity: number;
   onQuantityChange: (newQuantity: number) => void;
 }
-function getMenuItemImageUrl(name: string): string {
-  const baseUrl = "https://placehold.co/200x150/F38020/FFFFFF?font=roboto&text=";
-  switch (name) {
-    case "Sancocho de 3 Carnes":
-      return `${baseUrl}Sancocho+de+3+Carnes`;
-    case "Mondongo a la Criolla":
-      return `${baseUrl}Mondongo+a+la+Criolla`;
-    case "Pati Mongó y Compañía":
-      return `${baseUrl}Pati+Mongó+y+Compañía`;
-    case "Cerdo Guisado Criollo":
-      return `${baseUrl}Cerdo+Guisado+Criollo`;
-    case "Bistec Encebollado":
-      return `${baseUrl}Bistec+Encebollado`;
-    case "Res Guisada Tradicional":
-      return `${baseUrl}Res+Guisada+Tradicional`;
-    case "Pollo Guisado Casero":
-      return `${baseUrl}Pollo+Guisado+Casero`;
-    case "Pollo Frito Crocante":
-      return `${baseUrl}Pollo+Frito+Crocante`;
-    case "Pollo al Horno Doradito":
-      return `${baseUrl}Pollo+al+Horno+Doradito`;
-    case "Pechurina Empanizada":
-      return `${baseUrl}Pechurina+Empanizada`;
-    case "Pechuga a la Plancha":
-      return `${baseUrl}Pechuga+a+la+Plancha`;
-    case "Pechuga Salteada Vegetales":
-      return `${baseUrl}Pechuga+Salteada+Vegetales`;
-    case "Pechuga a la Crema":
-      return `${baseUrl}Pechuga+a+la+Crema`;
-    case "Tostones":
-      return `${baseUrl}Tostones`;
-    case "Arepita Ma��z":
-      return `${baseUrl}Arepita+Maíz`;
-    case "Arepita Yuca":
-      return `${baseUrl}Arepita+Yuca`;
-    case "Batata Frita":
-      return `${baseUrl}Batata+Frita`;
-    case "Cereza":
-      return `${baseUrl}Cereza`;
-    case "Limón":
-      return `${baseUrl}Limón`;
-    case "Chinola":
-      return `${baseUrl}Chinola`;
-    case "Tamarindo":
-      return `${baseUrl}Tamarindo`;
-    default: {
-      const defaultText = name.split(' — ')[0] || name;
-      return `${baseUrl}${encodeURIComponent(defaultText)}`;
-    }
-  }
-}
 function MenuItemCard({ item, quantity, onQuantityChange }: MenuItemCardProps) {
-  const [imageError, setImageError] = useState(false);
   const handleIncrement = () => onQuantityChange(Math.min(10, quantity + 1));
   const handleDecrement = () => onQuantityChange(Math.max(0, quantity - 1));
-  return (
-    <Card className="transition-all duration-200 hover:shadow-xl hover:-translate-y-1 overflow-hidden">
-      {imageError ? (
-            <div className="w-full h-32 bg-muted flex items-center justify-center">
-            <Image className="w-12 h-12 text-muted-foreground" />
+  const isCheckboxType = item.price === 0; // Heuristic for guarniciones/extras that are toggled
+  if (isCheckboxType) {
+    return (
+        <div className="flex items-center space-x-2">
+            <Checkbox id={item.id} checked={quantity > 0} onCheckedChange={(checked) => onQuantityChange(checked ? 1 : 0)} />
+            <Label htmlFor={item.id} className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {item.name}
+            </Label>
         </div>
-      ) : (
-        <img
-          src={getMenuItemImageUrl(item.name)}
-          alt={`Imagen de ${item.name}`}
-          loading="lazy"
-          className="w-full h-32 object-cover"
-          onError={() => setImageError(true)}
-        />
-      )}
+    )
+  }
+  return (
+    <Card className="transition-all hover:shadow-lg hover:-translate-y-1">
       <CardHeader className="flex flex-row items-start justify-between pb-2">
         <div>
           <CardTitle className="text-lg">{item.name}</CardTitle>
           {item.description && <CardDescription>{item.description}</CardDescription>}
         </div>
-        <div className="text-lg font-bold text-foreground shrink-0 ml-2">
+        <div className="text-lg font-bold text-foreground">
           RD$ {item.price}
         </div>
       </CardHeader>

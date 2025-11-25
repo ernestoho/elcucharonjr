@@ -2,9 +2,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus } from "lucide-react";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 export type MenuItem = {
   id: string;
   name: string;
@@ -23,9 +20,6 @@ interface MenuTabsProps {
   menu: Record<string, MenuCategory>;
   orderQuantities: Record<string, number>;
   onQuantityChange: (itemId: string, newQuantity: number) => void;
-  guarnicion: string | null;
-  onGuarnicionChange: (value: string) => void;
-  guarniciones: MenuItem[];
 }
 export function MenuTabs({
   days,
@@ -34,9 +28,6 @@ export function MenuTabs({
   menu,
   orderQuantities,
   onQuantityChange,
-  guarnicion,
-  onGuarnicionChange,
-  guarniciones
 }: MenuTabsProps) {
   return (
     <Tabs value={selectedDay} onValueChange={onDayChange} className="w-full">
@@ -62,23 +53,6 @@ export function MenuTabs({
               </div>
             </div>
           ))}
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Guarniciones</h2>
-            <p className="text-muted-foreground mb-4">Elige una guarnición para acompañar tu plato del día.</p>
-            <Select onValueChange={onGuarnicionChange} value={guarnicion ?? undefined}>
-              <SelectTrigger className="w-full md:w-[280px]">
-                <SelectValue placeholder="Selecciona una guarnición" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Opciones</SelectLabel>
-                  {guarniciones.map(g => (
-                    <SelectItem key={g.id} value={g.name}>{g.name}</SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
         </TabsContent>
       ))}
     </Tabs>
@@ -92,19 +66,8 @@ interface MenuItemCardProps {
 function MenuItemCard({ item, quantity, onQuantityChange }: MenuItemCardProps) {
   const handleIncrement = () => onQuantityChange(Math.min(10, quantity + 1));
   const handleDecrement = () => onQuantityChange(Math.max(0, quantity - 1));
-  const isCheckboxType = item.price === 0; // Heuristic for guarniciones/extras that are toggled
-  if (isCheckboxType) {
-    return (
-        <div className="flex items-center space-x-2">
-            <Checkbox id={item.id} checked={quantity > 0} onCheckedChange={(checked) => onQuantityChange(checked ? 1 : 0)} />
-            <Label htmlFor={item.id} className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                {item.name}
-            </Label>
-        </div>
-    )
-  }
   return (
-    <Card className="transition-all hover:shadow-lg hover:-translate-y-1">
+    <Card className="transition-all duration-200 hover:shadow-xl hover:-translate-y-1">
       <CardHeader className="flex flex-row items-start justify-between pb-2">
         <div>
           <CardTitle className="text-lg">{item.name}</CardTitle>

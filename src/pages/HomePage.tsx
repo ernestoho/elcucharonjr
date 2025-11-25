@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { MenuTabs, MenuItem, MenuCategory } from '@/components/MenuTabs';
-import { OrderSummary } from '@/components/OrderSummary';
+import { OrderSummary, GuarnicionSelection } from '@/components/OrderSummary';
 import { openWhatsApp, Order } from '@/lib/whatsapp';
 const MENU_DATA: Record<string, MenuCategory> = {
   especial: {
@@ -48,18 +48,24 @@ const MENU_DATA: Record<string, MenuCategory> = {
     ],
   },
 };
-const GUARNICIONES: MenuItem[] = [
-    { id: "arrozMaiz", name: "Arroz con Maíz", price: 0 },
-    { id: "arrozBlanco", name: "Arroz Blanco", price: 0 },
-    { id: "habichuelasNegras", name: "Habichuelas Negras", price: 0 },
-    { id: "habichuelasRojas", name: "Habichuelas Rojas", price: 0 },
-    { id: "guandules", name: "Guandules", price: 0 },
-    { id: "ensaladaVerde", name: "Ensalada Verde", price: 0 },
-    { id: "ensaladaPasta", name: "Ensalada de Pasta", price: 0 },
-    { id: "ensaladaVegetales", name: "Ensalada de Vegetales", price: 0 },
-    { id: "ensaladaTipile", name: "Ensalada Tipile", price: 0 },
-];
-const ALL_MENU_ITEMS = Object.values(MENU_DATA).flatMap(cat => cat.items).concat(GUARNICIONES);
+const GUARNICION_OPTIONS = {
+    arroz: [
+        { id: "arrozMaiz", name: "Arroz con Maíz", price: 0 },
+        { id: "arrozBlanco", name: "Arroz Blanco", price: 0 },
+    ],
+    crema: [
+        { id: "habichuelasNegras", name: "Habichuelas Negras", price: 0 },
+        { id: "habichuelasRojas", name: "Habichuelas Rojas", price: 0 },
+        { id: "guandules", name: "Guandules", price: 0 },
+    ],
+    ensalada: [
+        { id: "ensaladaVerde", name: "Ensalada Verde", price: 0 },
+        { id: "ensaladaPasta", name: "Ensalada de Pasta", price: 0 },
+        { id: "ensaladaVegetales", name: "Ensalada de Vegetales", price: 0 },
+        { id: "ensaladaTipile", name: "Ensalada Tipile", price: 0 },
+    ]
+};
+const ALL_MENU_ITEMS = Object.values(MENU_DATA).flatMap(cat => cat.items);
 const MENU_ITEMS_MAP = new Map(ALL_MENU_ITEMS.map(item => [item.id, item]));
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 function getDefaultDay(): string {
@@ -69,56 +75,61 @@ function getDefaultDay(): string {
   }
   return DAYS[0]; // Default to Monday
 }
+const INITIAL_GUARNICION_STATE: GuarnicionSelection = { arroz: null, crema: null, ensalada: null };
 export function HomePage() {
   const [selectedDay, setSelectedDay] = useState(getDefaultDay);
   const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
-  const [guarnicion, setGuarnicion] = useState<string | null>(null);
+  const [guarnicion, setGuarnicion] = useState<GuarnicionSelection>(INITIAL_GUARNICION_STATE);
   const handleQuantityChange = useCallback((itemId: string, newQuantity: number) => {
     setOrderQuantities(prev => ({ ...prev, [itemId]: newQuantity }));
   }, []);
+  const handleGuarnicionChange = useCallback((update: Partial<GuarnicionSelection>) => {
+    setGuarnicion(prev => ({ ...prev, ...update }));
+  }, []);
   const handleClearOrder = useCallback(() => {
     setOrderQuantities({});
-    setGuarnicion(null);
+    setGuarnicion(INITIAL_GUARNICION_STATE);
     toast.info("Tu pedido ha sido limpiado.");
   }, []);
   const order = useMemo((): Order => {
-    const order: Order = { items: [], extras: [], juices: [], guarnicion, total: 0 };
+    const newOrder: Order = { items: [], guarniciones: [], extras: [], juices: [], total: 0 };
     let total = 0;
     for (const [itemId, quantity] of Object.entries(orderQuantities)) {
       if (quantity > 0) {
         const item = MENU_ITEMS_MAP.get(itemId);
         if (item) {
-          const itemTotal = item.price * quantity;
-          total += itemTotal;
+          total += item.price * quantity;
           const orderItem = { ...item, quantity };
           if (MENU_DATA.extras.items.some(i => i.id === itemId)) {
-            order.extras.push(orderItem);
+            newOrder.extras.push(orderItem);
           } else if (MENU_DATA.jugos.items.some(i => i.id === itemId)) {
-            order.juices.push(orderItem);
+            newOrder.juices.push(orderItem);
           } else {
-            order.items.push(orderItem);
+            newOrder.items.push(orderItem);
           }
         }
       }
     }
-    order.total = total;
-    return order;
+    if (guarnicion.arroz) newOrder.guarniciones?.push({ id: 'guarn-arroz', name: `Arroz: ${guarnicion.arroz}`, price: 0, quantity: 1 });
+    if (guarnicion.crema) newOrder.guarniciones?.push({ id: 'guarn-crema', name: `Crema/Grano: ${guarnicion.crema}`, price: 0, quantity: 1 });
+    if (guarnicion.ensalada) newOrder.guarniciones?.push({ id: 'guarn-ensalada', name: `Ensalada: ${guarnicion.ensalada}`, price: 0, quantity: 1 });
+    newOrder.total = total;
+    return newOrder;
   }, [orderQuantities, guarnicion]);
   const handleSendOrder = () => {
-    if (order.items.length > 0 && !guarnicion) {
-        toast.error("Por favor, selecciona una guarnición.");
+    if (order.items.length > 0 && (!guarnicion.arroz && !guarnicion.crema && !guarnicion.ensalada)) {
+        toast.error("Por favor, selecciona al menos una guarnición para acompañar tu plato.");
         return;
     }
     openWhatsApp(order, { day: selectedDay });
   };
   useEffect(() => {
-    // Reset order when day changes, if desired
-    // setOrderQuantities({});
-    // setGuarnicion(null);
+    // Optional: Reset order when day changes
+    // handleClearOrder();
   }, [selectedDay]);
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <ThemeToggle className="fixed top-4 right-4" />
+      <ThemeToggle className="fixed top-4 right-4 z-50" />
       <header className="relative text-center py-20 md:py-32 lg:py-40 overflow-hidden">
         <div
           className="absolute inset-0 bg-gradient-to-br from-[rgb(243,128,32)]/20 via-transparent to-[rgb(88,52,181)]/20"
@@ -157,14 +168,14 @@ export function HomePage() {
                   menu={MENU_DATA}
                   orderQuantities={orderQuantities}
                   onQuantityChange={handleQuantityChange}
-                  guarnicion={guarnicion}
-                  onGuarnicionChange={setGuarnicion}
-                  guarniciones={GUARNICIONES}
                 />
               </div>
               <div className="hidden md:block md:col-span-1 lg:col-span-1">
                 <OrderSummary
                   order={order}
+                  guarnicion={guarnicion}
+                  onGuarnicionChange={handleGuarnicionChange}
+                  guarnicionOptions={GUARNICION_OPTIONS}
                   onClearOrder={handleClearOrder}
                   onSendOrder={handleSendOrder}
                 />
@@ -177,12 +188,15 @@ export function HomePage() {
       <div className="md:hidden">
         <OrderSummary
           order={order}
+          guarnicion={guarnicion}
+          onGuarnicionChange={handleGuarnicionChange}
+          guarnicionOptions={GUARNICION_OPTIONS}
           onClearOrder={handleClearOrder}
           onSendOrder={handleSendOrder}
         />
       </div>
       <footer className="py-8 text-center text-muted-foreground/80">
-        <p>Built with ❤️ at Cloudflare</p>
+        <p>Built with ❤�� at Cloudflare</p>
       </footer>
       <Toaster richColors closeButton />
     </div>

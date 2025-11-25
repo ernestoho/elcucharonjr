@@ -7,7 +7,7 @@ export interface OrderItem {
 }
 export interface Order {
   items: OrderItem[];
-  guarnicion: string | null;
+  guarniciones?: OrderItem[];
   extras: OrderItem[];
   juices: OrderItem[];
   total: number;
@@ -28,14 +28,12 @@ const PHONE_NUMBER = "18097898010"; // Dominican Republic country code 1 + area 
  * *Platos:*
  * - 1x Cerdo Guisado Criollo
  * --------------------
- * *Guarnición:*
- * - Arroz con Maíz
+ * *Guarniciones:*
+ * - Arroz: Arroz con Maíz
+ * - Crema: Habichuelas Rojas
  * --------------------
  * *Extras:*
  * - 2x Tostones
- * --------------------
- * *Jugos:*
- * - 1x Cereza
  * --------------------
  * *Total: RD$ 550*
  * (Pedido generado: 2024-08-12 14:30)
@@ -51,9 +49,11 @@ export function buildWhatsAppMessage(order: Order, meta: OrderMeta): string {
     });
     parts.push("--------------------");
   }
-  if (order.guarnicion) {
-    parts.push("*Guarnición:*");
-    parts.push(`- ${order.guarnicion}`);
+  if (order.guarniciones && order.guarniciones.length > 0) {
+    parts.push("*Guarniciones:*");
+    order.guarniciones.forEach(item => {
+      parts.push(`- ${item.name}`);
+    });
     parts.push("--------------------");
   }
   if (order.extras.length > 0) {

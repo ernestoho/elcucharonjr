@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -7,6 +7,7 @@ import { OrderSummary, GuarnicionSelection } from '@/components/OrderSummary';
 import { openWhatsApp, Order } from '@/lib/whatsapp';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api-client';
+import { errorReporter } from '@/lib/errorReporter';
 const FALLBACK_MENU_DATA: Record<string, MenuCategory> = {
   especial: {
     title: "ESPECIAL",
@@ -77,6 +78,10 @@ function getDefaultDay(): string {
 }
 const INITIAL_GUARNICION_STATE: GuarnicionSelection = { arroz: null, crema: null, ensalada: null };
 export function HomePage() {
+  // Guard against React module loading issues
+  if (typeof React === 'undefined') {
+    return <div>Loading...</div>;
+  }
   const [fullMenu, setFullMenu] = useState<{ days: Record<string, Record<string, MenuCategory>> } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(getDefaultDay);
@@ -90,11 +95,12 @@ export function HomePage() {
         if (menuData && menuData.days && Object.keys(menuData.days).length > 0) {
           setFullMenu(menuData);
         } else {
-          toast.error('No se pudo cargar el menú, usando datos de respaldo.');
+          toast.warning('Menú no disponible, usando datos de respaldo.');
         }
-      } catch (err) {
-        toast.error('Error al cargar el menú, usando datos de respaldo.');
-        console.error(err);
+      } catch (error) {
+        const message = 'Error al cargar el menú, usando datos de respaldo.';
+        toast.error(message);
+        errorReporter.report({ message, error, source: 'HomePageFetch' });
       } finally {
         setIsLoading(false);
       }
@@ -102,10 +108,7 @@ export function HomePage() {
     fetchMenu();
   }, []);
   const menuToUse = useMemo(() => {
-    if (fullMenu?.days?.[selectedDay]) {
-      return fullMenu.days[selectedDay];
-    }
-    return FALLBACK_MENU_DATA;
+    return fullMenu?.days?.[selectedDay] ?? FALLBACK_MENU_DATA;
   }, [fullMenu, selectedDay]);
   const allMenuItems = useMemo(() => Object.values(menuToUse).flatMap(cat => cat.items), [menuToUse]);
   const menuItemsMap = useMemo(() => new Map(allMenuItems.map(item => [item.id, item])), [allMenuItems]);
@@ -126,7 +129,7 @@ export function HomePage() {
     for (const [itemId, quantity] of Object.entries(orderQuantities)) {
       if (quantity > 0) {
         const item = menuItemsMap.get(itemId);
-        if (item) {
+        if (item) { // Null check to prevent crash
           total += item.price * quantity;
           const orderItem = { ...item, quantity };
           if (menuToUse.extras?.items.some(i => i.id === itemId)) {
@@ -146,8 +149,10 @@ export function HomePage() {
     return newOrder;
   }, [orderQuantities, guarnicion, menuItemsMap, menuToUse]);
   const handleSendOrder = () => {
-    if (order.items.length > 0 && (!guarnicion.arroz && !guarnicion.crema && !guarnicion.ensalada)) {
-        toast.error("Por favor, selecciona al menos una guarnición para acompañar tu plato.");
+    if (order.items.length > 0 && (!guarnicion.arroz || !guarnicion.crema || !guarnicion.ensalada)) {
+        toast.error("Por favor, selecciona tus 3 guarniciones.", {
+          description: "Elige un arroz, una crema/grano y una ensalada para tu plato."
+        });
         return;
     }
     openWhatsApp(order, { day: selectedDay });
@@ -255,7 +260,7 @@ export function HomePage() {
         />
       </div>
       <footer className="py-8 text-center text-muted-foreground/80">
-        <p>Built with ❤�� at Cloudflare</p>
+        <p>Built with ❤️ at Cloudflare</p>
       </footer>
       <Toaster richColors closeButton />
     </div>

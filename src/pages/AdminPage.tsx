@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { produce } from 'immer';
 import { Toaster, toast } from 'sonner';
@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trash2, PlusCircle, LogIn, Save, LogOut } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { errorReporter } from '@/lib/errorReporter';
+import { errorReporter, ClientErrorReport } from '@/lib/errorReporter';
 const AUTH_TOKEN_KEY = 'sazonlink-admin-token';
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const CATEGORIES = ["especial", "platoDelDia", "extras", "jugos"];
@@ -46,7 +46,11 @@ function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
     } catch (error) {
       const message = 'Login failed. Please check your password.';
       toast.error(message);
-      errorReporter.report({ error, source: 'AdminLogin', message });
+      errorReporter.report({
+        message,
+        error,
+        source: 'AdminLogin',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +104,11 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     } catch (error) {
       const message = 'Failed to load menu data.';
       toast.error(message);
-      errorReporter.report({ error, source: 'AdminFetchMenu', message });
+      errorReporter.report({
+        message,
+        error,
+        source: 'AdminFetchMenu',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -111,6 +119,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const handleItemChange = (day: string, category: string, itemIndex: number, field: keyof MenuItem, value: string | number) => {
     if (!menu) return;
     const nextState = produce(menu, draft => {
+      if (!draft.days[day]?.[category]?.[itemIndex]) return;
       const item = draft.days[day][category][itemIndex];
       if (field === 'price') {
         item[field] = Number(value) >= 0 ? Number(value) : 0;
@@ -123,6 +132,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const addItem = (day: string, category: string) => {
     if (!menu) return;
     const nextState = produce(menu, draft => {
+      if (!draft.days[day]?.[category]) draft.days[day][category] = [];
       draft.days[day][category].push({ id: crypto.randomUUID(), name: '', price: 0, description: '' });
     });
     setMenu(nextState);
@@ -130,6 +140,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const removeItem = (day: string, category: string, itemIndex: number) => {
     if (!menu) return;
     const nextState = produce(menu, draft => {
+      if (!draft.days[day]?.[category]) return;
       draft.days[day][category].splice(itemIndex, 1);
     });
     setMenu(nextState);
@@ -162,7 +173,11 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
         ? 'Failed to save. Your session may have expired.'
         : 'An unexpected error occurred while saving.';
       toast.error(message);
-      errorReporter.report({ error, source: 'AdminSaveMenu', message });
+      errorReporter.report({
+        message,
+        error,
+        source: 'AdminSaveMenu',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -260,6 +275,10 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   );
 }
 export function AdminPage() {
+  // Guard against React module loading issues
+  if (typeof React === 'undefined') {
+    return <div>Admin loading...</div>;
+  }
   const [token, setToken] = useState<string | null>(() => {
     try {
       return localStorage.getItem(AUTH_TOKEN_KEY);
@@ -268,11 +287,19 @@ export function AdminPage() {
     }
   });
   const handleLogin = (newToken: string) => {
-    localStorage.setItem(AUTH_TOKEN_KEY, newToken);
-    setToken(newToken);
+    try {
+      localStorage.setItem(AUTH_TOKEN_KEY, newToken);
+      setToken(newToken);
+    } catch (error) {
+      toast.error("Could not save session. Please enable cookies.");
+    }
   };
   const handleLogout = () => {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
+    try {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    } catch (error) {
+      // Ignore storage errors on logout
+    }
     setToken(null);
     toast.info('You have been logged out.');
   };

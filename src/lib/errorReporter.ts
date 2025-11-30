@@ -1,8 +1,8 @@
 import { toast } from 'sonner';
 export interface ClientErrorReport {
   message: string;
-  url?: string;
-  userAgent?: string;
+  url: string;
+  userAgent: string;
   timestamp: string;
   stack?: string;
   componentStack?: string;
@@ -27,9 +27,9 @@ class ErrorReporter {
     setTimeout(() => this.reportedErrors.delete(errorKey), this.throttleMs);
     const report: ClientErrorReport = {
       message: details.message || 'Unknown client error',
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString(),
+      url: details.url || window.location.href,
+      userAgent: details.userAgent || navigator.userAgent,
+      timestamp: details.timestamp || new Date().toISOString(),
       ...details,
     };
     // Log to console for local dev
@@ -53,7 +53,7 @@ export const errorReporter = new ErrorReporter();
 window.addEventListener('error', (event) => {
   errorReporter.report({
     message: event.message,
-    source: event.filename,
+    source: event.filename || 'global-error',
     lineno: event.lineno,
     colno: event.colno,
     error: event.error,
@@ -63,6 +63,7 @@ window.addEventListener('unhandledrejection', (event) => {
   errorReporter.report({
     message: `Unhandled promise rejection: ${event.reason}`,
     error: event.reason,
+    source: 'global-rejection',
   });
 });
 // This file is imported in main.tsx to initialize the handlers.

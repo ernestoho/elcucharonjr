@@ -1,10 +1,54 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
 import type { ApiResponse } from '@shared/types';
-import { UserEntity, ChatBoardEntity, MenuEntity, MenuState } from "./entities";
+import { UserEntity, ChatBoardEntity, MenuEntity, MenuState, MenuItem } from "./entities";
 import { ok, bad, notFound, isStr } from './core-utils';
 // A simple in-memory store for demo purposes. In a real app, use a more robust solution.
 const VALID_TOKENS = new Set<string>();
+const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const FALLBACK_MENU_DATA: Record<string, { title: string; items: Omit<MenuItem, 'id'>[] }> = {
+  especial: {
+    title: "ESPECIAL",
+    items: [
+      { name: "Sancocho de 3 Carnes", price: 375 },
+      { name: "Mondongo a la Criolla", price: 375 },
+      { name: "Pati Mongó y Compañía", price: 350 },
+    ],
+  },
+  platoDelDia: {
+    title: "PLATO DEL DÍA",
+    items: [
+      { name: "Cerdo Guisado Criollo", price: 250 },
+      { name: "Bistec Encebollado", price: 275 },
+      { name: "Res Guisada Tradicional", price: 250 },
+      { name: "Pollo Guisado Casero", price: 250 },
+      { name: "Pollo Frito Crocante", price: 250 },
+      { name: "Pollo al Horno Doradito", price: 250 },
+      { name: "Pechurina Empanizada", price: 250 },
+      { name: "Pechuga a la Plancha", price: 400 },
+      { name: "Pechuga Salteada Vegetales", price: 400 },
+      { name: "Pechuga a la Crema", price: 400 },
+    ],
+  },
+  extras: {
+    title: "EXTRAS",
+    items: [
+      { name: "Tostones", price: 100 },
+      { name: "Arepita Maíz", price: 25 },
+      { name: "Arepita Yuca", price: 25 },
+      { name: "Batata Frita", price: 100 },
+    ],
+  },
+  jugos: {
+    title: "JUGOS",
+    items: [
+      { name: "Cereza", price: 100 },
+      { name: "Limón", price: 100 },
+      { name: "Chinola", price: 100 },
+      { name: "Tamarindo", price: 100 },
+    ],
+  },
+};
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/test', (c) => c.json({ success: true, data: { name: 'CF Workers Demo' }}));
   // AUTH
@@ -20,8 +64,27 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // MENU
   app.get('/api/menu', async (c) => {
     const menuEntity = new MenuEntity(c.env, 'global');
-    const menu = await menuEntity.getState();
-    // If menu is empty, it might be the first run. We don't seed it here, admin should do it.
+    let menu = await menuEntity.getState();
+    // If menu is empty, seed it with fallback data for all days.
+    if (!menu || !menu.days || Object.keys(menu.days).length === 0) {
+      const seededMenu: MenuState = { days: {} };
+      const menuTemplate: Record<string, MenuItem[]> = {};
+      for (const [categoryKey, categoryData] of Object.entries(FALLBACK_MENU_DATA)) {
+        menuTemplate[categoryKey] = categoryData.items.map(item => ({
+          ...item,
+          id: crypto.randomUUID(),
+        }));
+      }
+      for (const day of DAYS) {
+        // Create a deep copy with new UUIDs for each day to ensure unique items
+        const dailyMenu: Record<string, MenuItem[]> = {};
+        for (const [categoryKey, items] of Object.entries(menuTemplate)) {
+            dailyMenu[categoryKey] = items.map(item => ({...item, id: crypto.randomUUID()}));
+        }
+        seededMenu.days[day] = dailyMenu;
+      }
+      menu = await menuEntity.mutate(() => seededMenu);
+    }
     return ok(c, menu);
   });
   app.post('/api/menu', async (c) => {
@@ -30,7 +93,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Authorization required' } as ApiResponse, 401);
     }
     const token = auth.slice(7);
-    // Simple token validation for this demo.
     if (!VALID_TOKENS.has(token)) {
         return c.json({ success: false, error: 'Invalid or expired token' } as ApiResponse, 401);
     }

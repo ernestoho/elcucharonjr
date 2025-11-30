@@ -77,7 +77,7 @@ function getDefaultDay(): string {
 }
 const INITIAL_GUARNICION_STATE: GuarnicionSelection = { arroz: null, crema: null, ensalada: null };
 export function HomePage() {
-  const [dynamicMenu, setDynamicMenu] = useState<Record<string, MenuCategory> | null>(null);
+  const [fullMenu, setFullMenu] = useState<{ days: Record<string, Record<string, MenuCategory>> } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(getDefaultDay);
   const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
@@ -87,21 +87,26 @@ export function HomePage() {
       try {
         setIsLoading(true);
         const menuData = await api<{ days: Record<string, Record<string, MenuCategory>> }>('/api/menu');
-        if (menuData && Object.keys(menuData.days).length > 0) {
-          setDynamicMenu(menuData.days[selectedDay] || {});
+        if (menuData && menuData.days && Object.keys(menuData.days).length > 0) {
+          setFullMenu(menuData);
         } else {
-          setDynamicMenu(FALLBACK_MENU_DATA);
+          toast.error('No se pudo cargar el menú, usando datos de respaldo.');
         }
       } catch (err) {
-        toast.error('No se pudo cargar el menú, usando el menú predeterminado.');
-        setDynamicMenu(FALLBACK_MENU_DATA);
+        toast.error('Error al cargar el menú, usando datos de respaldo.');
+        console.error(err);
       } finally {
         setIsLoading(false);
       }
     }
     fetchMenu();
-  }, [selectedDay]);
-  const menuToUse = dynamicMenu || FALLBACK_MENU_DATA;
+  }, []);
+  const menuToUse = useMemo(() => {
+    if (fullMenu?.days?.[selectedDay]) {
+      return fullMenu.days[selectedDay];
+    }
+    return FALLBACK_MENU_DATA;
+  }, [fullMenu, selectedDay]);
   const allMenuItems = useMemo(() => Object.values(menuToUse).flatMap(cat => cat.items), [menuToUse]);
   const menuItemsMap = useMemo(() => new Map(allMenuItems.map(item => [item.id, item])), [allMenuItems]);
   const handleQuantityChange = useCallback((itemId: string, newQuantity: number) => {

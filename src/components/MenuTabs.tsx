@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Plate } from "lucide-react";
+import { Minus, Plus, Image } from "lucide-react";
 export type MenuItem = {
   id: string;
   name: string;
@@ -89,8 +89,8 @@ function MenuItemCard({ item, quantity, onQuantityChange }: MenuItemCardProps) {
   return (
     <Card className="transition-all duration-200 hover:shadow-xl hover:-translate-y-1 overflow-hidden">
       {imageError ? (
-        <div className="w-full h-32 bg-muted flex items-center justify-center">
-            <Plate className="w-12 h-12 text-muted-foreground" />
+            <div className="w-full h-32 bg-muted flex items-center justify-center">
+            <Image className="w-12 h-12 text-muted-foreground" />
         </div>
       ) : (
         <img

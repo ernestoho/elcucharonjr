@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, Plate } from "lucide-react";
 export type MenuItem = {
   id: string;
   name: string;
@@ -63,17 +64,49 @@ interface MenuItemCardProps {
   quantity: number;
   onQuantityChange: (newQuantity: number) => void;
 }
+function getMenuItemImageUrl(name: string): string {
+  const baseUrl = "https://placehold.co/200x150/F38020/FFFFFF?font=roboto&text=";
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes("sancocho") || lowerName.includes("mondongo")) return `${baseUrl}Sancocho`;
+  if (lowerName.includes("pati mongó")) return `${baseUrl}Pati+Mongó`;
+  if (lowerName.includes("pollo")) return `${baseUrl}Pollo`;
+  if (lowerName.includes("cerdo")) return `${baseUrl}Cerdo`;
+  if (lowerName.includes("bistec") || lowerName.includes("res")) return `${baseUrl}Bistec/Res`;
+  if (lowerName.includes("pechuga") || lowerName.includes("pechurina")) return `${baseUrl}Pechuga`;
+  if (lowerName.includes("tostones")) return `${baseUrl}Tostones`;
+  if (lowerName.includes("arepita")) return `${baseUrl}Arepita`;
+  if (lowerName.includes("batata")) return `${baseUrl}Batata`;
+  if (lowerName.includes("cereza")) return `${baseUrl}Cereza`;
+  if (lowerName.includes("limón")) return `${baseUrl}Limón`;
+  if (lowerName.includes("chinola")) return `${baseUrl}Chinola`;
+  if (lowerName.includes("tamarindo")) return `${baseUrl}Tamarindo`;
+  return `${baseUrl}${encodeURIComponent(name.split(' ')[0])}`;
+}
 function MenuItemCard({ item, quantity, onQuantityChange }: MenuItemCardProps) {
+  const [imageError, setImageError] = useState(false);
   const handleIncrement = () => onQuantityChange(Math.min(10, quantity + 1));
   const handleDecrement = () => onQuantityChange(Math.max(0, quantity - 1));
   return (
-    <Card className="transition-all duration-200 hover:shadow-xl hover:-translate-y-1">
+    <Card className="transition-all duration-200 hover:shadow-xl hover:-translate-y-1 overflow-hidden">
+      {imageError ? (
+        <div className="w-full h-32 bg-muted flex items-center justify-center">
+            <Plate className="w-12 h-12 text-muted-foreground" />
+        </div>
+      ) : (
+        <img
+          src={getMenuItemImageUrl(item.name)}
+          alt={`Imagen de ${item.name}`}
+          loading="lazy"
+          className="w-full h-32 object-cover"
+          onError={() => setImageError(true)}
+        />
+      )}
       <CardHeader className="flex flex-row items-start justify-between pb-2">
         <div>
           <CardTitle className="text-lg">{item.name}</CardTitle>
           {item.description && <CardDescription>{item.description}</CardDescription>}
         </div>
-        <div className="text-lg font-bold text-foreground">
+        <div className="text-lg font-bold text-foreground shrink-0 ml-2">
           RD$ {item.price}
         </div>
       </CardHeader>

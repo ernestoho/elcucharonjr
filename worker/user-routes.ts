@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import type { Env, ApiResponse } from './core-utils';
+import type { Env } from './core-utils';
+import type { ApiResponse } from '@shared/types';
 import { UserEntity, ChatBoardEntity, MenuEntity, MenuState } from "./entities";
 import { ok, bad, notFound, isStr } from './core-utils';
 // A simple in-memory store for demo purposes. In a real app, use a more robust solution.

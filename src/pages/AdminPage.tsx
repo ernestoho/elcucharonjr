@@ -47,8 +47,10 @@ function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
       errorReporter.report({
         error,
         source: 'AdminLogin',
-        showToast: true,
         message: 'Login failed. Please check your password.',
+        level: 'error',
+        url: typeof window !== 'undefined' ? window.location.href : '',
+        timestamp: new Date().toISOString(),
       });
     } finally {
       setIsLoading(false);
@@ -104,8 +106,10 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       errorReporter.report({
         error,
         source: 'AdminFetchMenu',
-        showToast: true,
         message: 'Failed to load menu data.',
+        level: 'error',
+        url: typeof window !== 'undefined' ? window.location.href : '',
+        timestamp: new Date().toISOString(),
       });
     } finally {
       setIsLoading(false);
@@ -170,8 +174,10 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       errorReporter.report({
         error,
         source: 'AdminSaveMenu',
-        showToast: true,
         message: errorMessage,
+        level: 'error',
+        url: typeof window !== 'undefined' ? window.location.href : '',
+        timestamp: new Date().toISOString(),
       });
     } finally {
       setIsSaving(false);

@@ -138,6 +138,17 @@ export function HomePage() {
           }}
         />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
+            <img 
+              src="https://placehold.co/128x128/F38020/FFFFFF?text=El+Cucharon+JR&font=roboto" 
+              alt="El Cucharon JR Logo" 
+              className="w-24 h-24 md:w-32 md:h-32 rounded-full mx-auto mb-4 shadow-lg" 
+            />
+          </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

@@ -71,7 +71,7 @@ function getMenuItemImageUrl(name: string): string {
       return `${baseUrl}Sancocho+de+3+Carnes`;
     case "Mondongo a la Criolla":
       return `${baseUrl}Mondongo+a+la+Criolla`;
-    case "Pati Mong�� y Compañía":
+    case "Pati Mongó y Compañía":
       return `${baseUrl}Pati+Mongó+y+Compañía`;
     case "Cerdo Guisado Criollo":
       return `${baseUrl}Cerdo+Guisado+Criollo`;
@@ -95,7 +95,7 @@ function getMenuItemImageUrl(name: string): string {
       return `${baseUrl}Pechuga+a+la+Crema`;
     case "Tostones":
       return `${baseUrl}Tostones`;
-    case "Arepita Maíz":
+    case "Arepita Ma��z":
       return `${baseUrl}Arepita+Maíz`;
     case "Arepita Yuca":
       return `${baseUrl}Arepita+Yuca`;
@@ -109,9 +109,10 @@ function getMenuItemImageUrl(name: string): string {
       return `${baseUrl}Chinola`;
     case "Tamarindo":
       return `${baseUrl}Tamarindo`;
-    default:
+    default: {
       const defaultText = name.split(' — ')[0] || name;
       return `${baseUrl}${encodeURIComponent(defaultText)}`;
+    }
   }
 }
 function MenuItemCard({ item, quantity, onQuantityChange }: MenuItemCardProps) {

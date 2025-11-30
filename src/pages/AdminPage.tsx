@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { produce } from 'immer';
 import { Toaster, toast } from 'sonner';
@@ -11,7 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trash2, PlusCircle, LogIn, Save, LogOut } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { errorReporter } from '@/lib/errorReporter';
 const AUTH_TOKEN_KEY = 'sazonlink-admin-token';
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const CATEGORIES = ["especial", "platoDelDia", "extras", "jugos"];
@@ -23,7 +22,7 @@ const CATEGORY_TITLES: Record<string, string> = {
 };
 interface MenuItem {
   id: string;
-  name: string;
+  name:string;
   price: number;
   description?: string;
 }
@@ -44,16 +43,7 @@ function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
       onLogin(token);
       toast.success('Login successful!');
     } catch (error) {
-      const message = 'Login failed. Please check your password.';
-      toast.error(message);
-      errorReporter.report({
-        level: 'error',
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
-        timestamp: new Date().toISOString(),
-        message,
-        error,
-        source: 'AdminLogin',
-      });
+      toast.error('Login failed. Please check your password.');
     } finally {
       setIsLoading(false);
     }
@@ -96,6 +86,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     setIsLoading(true);
     try {
       const data = await api<MenuData>('/api/menu');
+      // Ensure all days and categories exist
       const fullMenu: MenuData = { days: {} };
       for (const day of DAYS) {
         fullMenu.days[day] = {};
@@ -105,16 +96,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       }
       setMenu(fullMenu);
     } catch (error) {
-      const message = 'Failed to load menu data.';
-      toast.error(message);
-      errorReporter.report({
-        level: 'error',
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
-        timestamp: new Date().toISOString(),
-        message,
-        error,
-        source: 'AdminFetchMenu',
-      });
+      toast.error('Failed to load menu data.');
     } finally {
       setIsLoading(false);
     }
@@ -125,10 +107,9 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const handleItemChange = (day: string, category: string, itemIndex: number, field: keyof MenuItem, value: string | number) => {
     if (!menu) return;
     const nextState = produce(menu, draft => {
-      if (!draft.days[day]?.[category]?.[itemIndex]) return;
       const item = draft.days[day][category][itemIndex];
       if (field === 'price') {
-        item[field] = Number(value) >= 0 ? Number(value) : 0;
+        item[field] = Number(value) || 0;
       } else {
         (item[field] as string) = String(value);
       }
@@ -138,33 +119,19 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const addItem = (day: string, category: string) => {
     if (!menu) return;
     const nextState = produce(menu, draft => {
-      if (!draft.days[day]?.[category]) draft.days[day][category] = [];
-      draft.days[day][category].push({ id: crypto.randomUUID(), name: '', price: 0, description: '' });
+      draft.days[day][category].push({ id: crypto.randomUUID(), name: 'New Item', price: 0, description: '' });
     });
     setMenu(nextState);
   };
   const removeItem = (day: string, category: string, itemIndex: number) => {
     if (!menu) return;
     const nextState = produce(menu, draft => {
-      if (!draft.days[day]?.[category]) return;
       draft.days[day][category].splice(itemIndex, 1);
     });
     setMenu(nextState);
   };
   const handleSaveChanges = async () => {
     if (!menu) return;
-    for (const day of DAYS) {
-      for (const category of CATEGORIES) {
-        for (const [index, item] of menu.days[day][category].entries()) {
-          if (!item.name.trim() || item.price <= 0) {
-            toast.warning(`Invalid item in ${day}, ${CATEGORY_TITLES[category]}`, {
-              description: `Item #${index + 1} must have a name and a price greater than 0.`,
-            });
-            return;
-          }
-        }
-      }
-    }
     setIsSaving(true);
     try {
       await api('/api/menu', {
@@ -173,40 +140,20 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
         body: JSON.stringify(menu),
       });
       toast.success('Menu saved successfully!');
-      fetchMenu(); // Refresh data after saving
     } catch (error) {
-      const message = error instanceof Error && error.message.includes('401')
-        ? 'Failed to save. Your session may have expired.'
-        : 'An unexpected error occurred while saving.';
-      toast.error(message);
-      errorReporter.report({
-        level: 'error',
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
-        timestamp: new Date().toISOString(),
-        message,
-        error,
-        source: 'AdminSaveMenu',
-      });
+      toast.error('Failed to save menu. Your session might have expired.');
     } finally {
       setIsSaving(false);
     }
   };
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
-        <div className="flex justify-between items-center mb-8">
-          <Skeleton className="h-10 w-1/3" />
-          <div className="flex gap-4"><Skeleton className="h-10 w-48" /><Skeleton className="h-10 w-24" /></div>
-        </div>
-        <Skeleton className="h-10 w-full mb-6" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <Skeleton className="h-10 w-1/4 mb-4" />
+        <Skeleton className="h-12 w-full mb-8" />
         <div className="space-y-4">
-          {CATEGORIES.map(cat => (
-            <div key={cat} className="border rounded-lg p-4 space-y-4">
-              <Skeleton className="h-8 w-1/4" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ))}
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
         </div>
       </div>
     );
@@ -214,7 +161,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="py-8 md:py-10 lg:py-12">
-        <div className="flex flex-wrap gap-4 justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-display font-bold">Menu Dashboard</h1>
           <div className="flex items-center gap-4">
             <Button onClick={handleSaveChanges} disabled={isSaving}>
@@ -233,47 +180,44 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
             <TabsContent key={day} value={day} className="mt-6">
               <Accordion type="multiple" defaultValue={CATEGORIES} className="w-full space-y-4">
                 {CATEGORIES.map(category => (
-                  <motion.div key={category} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                    <AccordionItem value={category} className="border rounded-lg px-4 bg-card">
-                      <AccordionTrigger className="text-xl font-semibold hover:no-underline">{CATEGORY_TITLES[category]}</AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <div className="space-y-4">
-                          {menu?.days[day]?.[category]?.map((item, index) => (
-                            <Card key={item.id} className="p-4 bg-background">
-                              <div className="grid grid-cols-1 md:grid-cols-8 gap-4 items-center">
-                                <Input
-                                  placeholder="Item Name"
-                                  value={item.name}
-                                  onChange={e => handleItemChange(day, category, index, 'name', e.target.value)}
-                                  className="md:col-span-3"
-                                />
-                                <Input
-                                  placeholder="Description (optional)"
-                                  value={item.description || ''}
-                                  onChange={e => handleItemChange(day, category, index, 'description', e.target.value)}
-                                  className="md:col-span-3"
-                                />
-                                <Input
-                                  type="number"
-                                  placeholder="Price"
-                                  value={item.price}
-                                  min="0"
-                                  onChange={e => handleItemChange(day, category, index, 'price', e.target.value)}
-                                  className="md:col-span-1"
-                                />
-                                <Button variant="ghost" size="icon" onClick={() => removeItem(day, category, index)} className="text-muted-foreground hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </Card>
-                          ))}
-                          <Button variant="outline" onClick={() => addItem(day, category)}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Item to {CATEGORY_TITLES[category]}
-                          </Button>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </motion.div>
+                  <AccordionItem key={category} value={category} className="border rounded-lg px-4">
+                    <AccordionTrigger className="text-xl font-semibold">{CATEGORY_TITLES[category]}</AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                      <div className="space-y-4">
+                        {menu?.days[day]?.[category]?.map((item, index) => (
+                          <Card key={item.id} className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-8 gap-4 items-center">
+                              <Input
+                                placeholder="Item Name"
+                                value={item.name}
+                                onChange={e => handleItemChange(day, category, index, 'name', e.target.value)}
+                                className="md:col-span-3"
+                              />
+                              <Input
+                                placeholder="Description"
+                                value={item.description || ''}
+                                onChange={e => handleItemChange(day, category, index, 'description', e.target.value)}
+                                className="md:col-span-3"
+                              />
+                              <Input
+                                type="number"
+                                placeholder="Price"
+                                value={item.price}
+                                onChange={e => handleItemChange(day, category, index, 'price', e.target.value)}
+                                className="md:col-span-1"
+                              />
+                              <Button variant="ghost" size="icon" onClick={() => removeItem(day, category, index)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </Card>
+                        ))}
+                        <Button variant="outline" onClick={() => addItem(day, category)}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add Item to {CATEGORY_TITLES[category]}
+                        </Button>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
               </Accordion>
             </TabsContent>
@@ -284,28 +228,13 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   );
 }
 export function AdminPage() {
-
-  const [token, setToken] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(AUTH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
-  });
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem(AUTH_TOKEN_KEY));
   const handleLogin = (newToken: string) => {
-    try {
-      localStorage.setItem(AUTH_TOKEN_KEY, newToken);
-      setToken(newToken);
-    } catch (error) {
-      toast.error("Could not save session. Please enable cookies.");
-    }
+    localStorage.setItem(AUTH_TOKEN_KEY, newToken);
+    setToken(newToken);
   };
   const handleLogout = () => {
-    try {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-    } catch (error) {
-      // Ignore storage errors on logout
-    }
+    localStorage.removeItem(AUTH_TOKEN_KEY);
     setToken(null);
     toast.info('You have been logged out.');
   };

@@ -2,10 +2,12 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { MenuTabs, MenuItem, MenuCategory } from '@/components/MenuTabs';
+import { MenuTabs, MenuCategory } from '@/components/MenuTabs';
 import { OrderSummary, GuarnicionSelection } from '@/components/OrderSummary';
 import { openWhatsApp, Order } from '@/lib/whatsapp';
-const MENU_DATA: Record<string, MenuCategory> = {
+import { Skeleton } from '@/components/ui/skeleton';
+import { api } from '@/lib/api-client';
+const FALLBACK_MENU_DATA: Record<string, MenuCategory> = {
   especial: {
     title: "ESPECIAL",
     items: [
@@ -65,8 +67,6 @@ const GUARNICION_OPTIONS = {
         { id: "ensaladaTipile", name: "Ensalada Tipile", price: 0 },
     ]
 };
-const ALL_MENU_ITEMS = Object.values(MENU_DATA).flatMap(cat => cat.items);
-const MENU_ITEMS_MAP = new Map(ALL_MENU_ITEMS.map(item => [item.id, item]));
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 function getDefaultDay(): string {
   const today = new Date().getDay(); // Sunday = 0, Monday = 1, etc.
@@ -77,9 +77,33 @@ function getDefaultDay(): string {
 }
 const INITIAL_GUARNICION_STATE: GuarnicionSelection = { arroz: null, crema: null, ensalada: null };
 export function HomePage() {
+  const [dynamicMenu, setDynamicMenu] = useState<Record<string, MenuCategory> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(getDefaultDay);
   const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
   const [guarnicion, setGuarnicion] = useState<GuarnicionSelection>(INITIAL_GUARNICION_STATE);
+  useEffect(() => {
+    async function fetchMenu() {
+      try {
+        setIsLoading(true);
+        const menuData = await api<{ days: Record<string, Record<string, MenuCategory>> }>('/api/menu');
+        if (menuData && Object.keys(menuData.days).length > 0) {
+          setDynamicMenu(menuData.days[selectedDay] || {});
+        } else {
+          setDynamicMenu(FALLBACK_MENU_DATA);
+        }
+      } catch (err) {
+        toast.error('No se pudo cargar el menú, usando el menú predeterminado.');
+        setDynamicMenu(FALLBACK_MENU_DATA);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchMenu();
+  }, [selectedDay]);
+  const menuToUse = dynamicMenu || FALLBACK_MENU_DATA;
+  const allMenuItems = useMemo(() => Object.values(menuToUse).flatMap(cat => cat.items), [menuToUse]);
+  const menuItemsMap = useMemo(() => new Map(allMenuItems.map(item => [item.id, item])), [allMenuItems]);
   const handleQuantityChange = useCallback((itemId: string, newQuantity: number) => {
     setOrderQuantities(prev => ({ ...prev, [itemId]: newQuantity }));
   }, []);
@@ -96,13 +120,13 @@ export function HomePage() {
     let total = 0;
     for (const [itemId, quantity] of Object.entries(orderQuantities)) {
       if (quantity > 0) {
-        const item = MENU_ITEMS_MAP.get(itemId);
+        const item = menuItemsMap.get(itemId);
         if (item) {
           total += item.price * quantity;
           const orderItem = { ...item, quantity };
-          if (MENU_DATA.extras.items.some(i => i.id === itemId)) {
+          if (menuToUse.extras?.items.some(i => i.id === itemId)) {
             newOrder.extras.push(orderItem);
-          } else if (MENU_DATA.jugos.items.some(i => i.id === itemId)) {
+          } else if (menuToUse.jugos?.items.some(i => i.id === itemId)) {
             newOrder.juices.push(orderItem);
           } else {
             newOrder.items.push(orderItem);
@@ -115,7 +139,7 @@ export function HomePage() {
     if (guarnicion.ensalada) newOrder.guarniciones?.push({ id: 'guarn-ensalada', name: `Ensalada: ${guarnicion.ensalada}`, price: 0, quantity: 1 });
     newOrder.total = total;
     return newOrder;
-  }, [orderQuantities, guarnicion]);
+  }, [orderQuantities, guarnicion, menuItemsMap, menuToUse]);
   const handleSendOrder = () => {
     if (order.items.length > 0 && (!guarnicion.arroz && !guarnicion.crema && !guarnicion.ensalada)) {
         toast.error("Por favor, selecciona al menos una guarnición para acompañar tu plato.");
@@ -123,10 +147,27 @@ export function HomePage() {
     }
     openWhatsApp(order, { day: selectedDay });
   };
-  useEffect(() => {
-    // Optional: Reset order when day changes
-    // handleClearOrder();
-  }, [selectedDay]);
+  const renderLoadingSkeleton = () => (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="py-8 md:py-10 lg:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 items-start">
+          <div className="md:col-span-2 lg:col-span-3 space-y-8">
+            <Skeleton className="h-10 w-full" />
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-1/4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-48 w-full" />
+              </div>
+            </div>
+          </div>
+          <div className="hidden md:block md:col-span-1 lg:col-span-1">
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
   return (
     <div className="min-h-screen bg-background text-foreground">
       <ThemeToggle className="fixed top-4 right-4 z-50" />
@@ -168,32 +209,34 @@ export function HomePage() {
         </div>
       </header>
       <main>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-8 md:py-10 lg:py-12">
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 items-start">
-              <div className="md:col-span-2 lg:col-span-3">
-                <MenuTabs
-                  days={DAYS}
-                  selectedDay={selectedDay}
-                  onDayChange={setSelectedDay}
-                  menu={MENU_DATA}
-                  orderQuantities={orderQuantities}
-                  onQuantityChange={handleQuantityChange}
-                />
-              </div>
-              <div className="hidden md:block md:col-span-1 lg:col-span-1">
-                <OrderSummary
-                  order={order}
-                  guarnicion={guarnicion}
-                  onGuarnicionChange={handleGuarnicionChange}
-                  guarnicionOptions={GUARNICION_OPTIONS}
-                  onClearOrder={handleClearOrder}
-                  onSendOrder={handleSendOrder}
-                />
+        {isLoading ? renderLoadingSkeleton() : (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-8 md:py-10 lg:py-12">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 items-start">
+                <div className="md:col-span-2 lg:col-span-3">
+                  <MenuTabs
+                    days={DAYS}
+                    selectedDay={selectedDay}
+                    onDayChange={setSelectedDay}
+                    menu={menuToUse}
+                    orderQuantities={orderQuantities}
+                    onQuantityChange={handleQuantityChange}
+                  />
+                </div>
+                <div className="hidden md:block md:col-span-1 lg:col-span-1">
+                  <OrderSummary
+                    order={order}
+                    guarnicion={guarnicion}
+                    onGuarnicionChange={handleGuarnicionChange}
+                    guarnicionOptions={GUARNICION_OPTIONS}
+                    onClearOrder={handleClearOrder}
+                    onSendOrder={handleSendOrder}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
       {/* Mobile Order Summary */}
       <div className="md:hidden">
@@ -207,7 +250,7 @@ export function HomePage() {
         />
       </div>
       <footer className="py-8 text-center text-muted-foreground/80">
-        <p>Built with ❤️ at Cloudflare</p>
+        <p>Built with ❤�� at Cloudflare</p>
       </footer>
       <Toaster richColors closeButton />
     </div>

@@ -103,7 +103,7 @@ function OrderContent({ order, guarnicion, onGuarnicionChange, guarnicionOptions
         ) : (
           <div className="text-center text-muted-foreground py-10">
             <ShoppingCart className="mx-auto h-12 w-12" />
-            <p className="mt-4">Tu carrito está vac��o.</p>
+            <p className="mt-4">Tu carrito está vacío.</p>
             <p className="text-xs">Agrega productos del menú para comenzar.</p>
           </div>
         )}
@@ -152,7 +152,7 @@ export function OrderSummary(props: OrderSummaryProps) {
             <Button
               variant="default"
               size="lg"
-              className="w-full h-16 rounded-2xl bg-[rgb(243,128,32)] text-white hover:bg-[#e06e15] shadow-xl flex justify-between items-center text-lg"
+              className="w-full h-16 rounded-2xl bg-green-600 text-white hover:bg-green-700 shadow-xl flex justify-between items-center text-lg"
             >
               <span>Ver Pedido</span>
               <div className="flex items-center gap-2">

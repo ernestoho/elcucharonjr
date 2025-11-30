@@ -66,21 +66,53 @@ interface MenuItemCardProps {
 }
 function getMenuItemImageUrl(name: string): string {
   const baseUrl = "https://placehold.co/200x150/F38020/FFFFFF?font=roboto&text=";
-  const lowerName = name.toLowerCase();
-  if (lowerName.includes("sancocho") || lowerName.includes("mondongo")) return `${baseUrl}Sancocho`;
-  if (lowerName.includes("pati mongó")) return `${baseUrl}Pati+Mongó`;
-  if (lowerName.includes("pollo")) return `${baseUrl}Pollo`;
-  if (lowerName.includes("cerdo")) return `${baseUrl}Cerdo`;
-  if (lowerName.includes("bistec") || lowerName.includes("res")) return `${baseUrl}Bistec/Res`;
-  if (lowerName.includes("pechuga") || lowerName.includes("pechurina")) return `${baseUrl}Pechuga`;
-  if (lowerName.includes("tostones")) return `${baseUrl}Tostones`;
-  if (lowerName.includes("arepita")) return `${baseUrl}Arepita`;
-  if (lowerName.includes("batata")) return `${baseUrl}Batata`;
-  if (lowerName.includes("cereza")) return `${baseUrl}Cereza`;
-  if (lowerName.includes("limón")) return `${baseUrl}Limón`;
-  if (lowerName.includes("chinola")) return `${baseUrl}Chinola`;
-  if (lowerName.includes("tamarindo")) return `${baseUrl}Tamarindo`;
-  return `${baseUrl}${encodeURIComponent(name.split(' ')[0])}`;
+  switch (name) {
+    case "Sancocho de 3 Carnes":
+      return `${baseUrl}Sancocho+de+3+Carnes`;
+    case "Mondongo a la Criolla":
+      return `${baseUrl}Mondongo+a+la+Criolla`;
+    case "Pati Mong�� y Compañía":
+      return `${baseUrl}Pati+Mongó+y+Compañía`;
+    case "Cerdo Guisado Criollo":
+      return `${baseUrl}Cerdo+Guisado+Criollo`;
+    case "Bistec Encebollado":
+      return `${baseUrl}Bistec+Encebollado`;
+    case "Res Guisada Tradicional":
+      return `${baseUrl}Res+Guisada+Tradicional`;
+    case "Pollo Guisado Casero":
+      return `${baseUrl}Pollo+Guisado+Casero`;
+    case "Pollo Frito Crocante":
+      return `${baseUrl}Pollo+Frito+Crocante`;
+    case "Pollo al Horno Doradito":
+      return `${baseUrl}Pollo+al+Horno+Doradito`;
+    case "Pechurina Empanizada":
+      return `${baseUrl}Pechurina+Empanizada`;
+    case "Pechuga a la Plancha":
+      return `${baseUrl}Pechuga+a+la+Plancha`;
+    case "Pechuga Salteada Vegetales":
+      return `${baseUrl}Pechuga+Salteada+Vegetales`;
+    case "Pechuga a la Crema":
+      return `${baseUrl}Pechuga+a+la+Crema`;
+    case "Tostones":
+      return `${baseUrl}Tostones`;
+    case "Arepita Maíz":
+      return `${baseUrl}Arepita+Maíz`;
+    case "Arepita Yuca":
+      return `${baseUrl}Arepita+Yuca`;
+    case "Batata Frita":
+      return `${baseUrl}Batata+Frita`;
+    case "Cereza":
+      return `${baseUrl}Cereza`;
+    case "Limón":
+      return `${baseUrl}Limón`;
+    case "Chinola":
+      return `${baseUrl}Chinola`;
+    case "Tamarindo":
+      return `${baseUrl}Tamarindo`;
+    default:
+      const defaultText = name.split(' — ')[0] || name;
+      return `${baseUrl}${encodeURIComponent(defaultText)}`;
+  }
 }
 function MenuItemCard({ item, quantity, onQuantityChange }: MenuItemCardProps) {
   const [imageError, setImageError] = useState(false);

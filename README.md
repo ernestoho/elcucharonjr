@@ -2,7 +2,7 @@
 
 SazónLink is a single-page, visually polished restaurant menu link designed for fast ordering via WhatsApp. It presents the restaurant's full menu organized into tabs for Monday through Saturday. Each day tab displays the menu grouped by categories (ESPECIAL, PLATO DEL DÍA, GUARNICIONES, EXTRAS, JUGOS) using clean card layouts and a minimalist design aesthetic with a warm gradient hero. Customers can build orders by selecting dishes with quantities, choosing a guarnición, adding extras and juices, then send a prefilled WhatsApp message to +8097898010 with order details, day, and timestamp. The app is purely frontend-focused, using local state management and integrates seamlessly with WhatsApp Web or mobile app.
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ernestoho/elcucharonjr)
 
 ## Features
 
@@ -136,7 +136,7 @@ Deploy to Cloudflare Workers for global edge delivery. The project is pre-config
    ```
    Deploys the Worker and static assets. Access at your Worker URL (e.g., `sazonlink-eyb8bcd4n5t-ktfo3ctkx.your-subdomain.workers.dev`).
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ernestoho/elcucharonjr)
 
 - **Custom Domain**: Run `wrangler deploy --name sazonlink` and configure in Cloudflare dashboard.
 - **Environment Variables**: Add via `wrangler secret put <KEY>` if needed (e.g., for API keys).

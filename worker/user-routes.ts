@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { Env } from './core-utils';
+import type { Env, ApiResponse } from './core-utils';
 import { UserEntity, ChatBoardEntity, MenuEntity, MenuState } from "./entities";
 import { ok, bad, notFound, isStr } from './core-utils';
 // A simple in-memory store for demo purposes. In a real app, use a more robust solution.
@@ -10,7 +10,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.post('/api/auth', async (c) => {
     const { password } = (await c.req.json()) as { password?: string };
     if (password !== 'admin123') {
-      return bad(c, 'Invalid credentials', 401);
+      return c.json({ success: false, error: 'Invalid credentials' } as ApiResponse, 401);
     }
     const token = crypto.randomUUID();
     VALID_TOKENS.add(token); // In a real app, you'd persist this with an expiry
@@ -26,12 +26,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.post('/api/menu', async (c) => {
     const auth = c.req.header('Authorization');
     if (!auth || !auth.startsWith('Bearer ')) {
-      return bad(c, 'Authorization required', 401);
+      return c.json({ success: false, error: 'Authorization required' } as ApiResponse, 401);
     }
     const token = auth.slice(7);
     // Simple token validation for this demo.
     if (!VALID_TOKENS.has(token)) {
-        return bad(c, 'Invalid or expired token', 401);
+        return c.json({ success: false, error: 'Invalid or expired token' } as ApiResponse, 401);
     }
     const body = await c.req.json<MenuState>();
     if (!body || typeof body.days !== 'object') {

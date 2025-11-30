@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trash2, PlusCircle, LogIn, Save, LogOut } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { errorReporter } from '@/lib/errorReporter';
 const AUTH_TOKEN_KEY = 'sazonlink-admin-token';
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const CATEGORIES = ["especial", "platoDelDia", "extras", "jugos"];
@@ -43,7 +44,12 @@ function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
       onLogin(token);
       toast.success('Login successful!');
     } catch (error) {
-      toast.error('Login failed. Please check your password.');
+      errorReporter.report({
+        error,
+        source: 'AdminLogin',
+        showToast: true,
+        message: 'Login failed. Please check your password.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +92,6 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     setIsLoading(true);
     try {
       const data = await api<MenuData>('/api/menu');
-      // Ensure all days and categories exist
       const fullMenu: MenuData = { days: {} };
       for (const day of DAYS) {
         fullMenu.days[day] = {};
@@ -96,7 +101,12 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       }
       setMenu(fullMenu);
     } catch (error) {
-      toast.error('Failed to load menu data.');
+      errorReporter.report({
+        error,
+        source: 'AdminFetchMenu',
+        showToast: true,
+        message: 'Failed to load menu data.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +129,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const addItem = (day: string, category: string) => {
     if (!menu) return;
     const nextState = produce(menu, draft => {
-      draft.days[day][category].push({ id: crypto.randomUUID(), name: 'New Item', price: 0, description: '' });
+      draft.days[day][category].push({ id: crypto.randomUUID(), name: '', price: 0, description: '' });
     });
     setMenu(nextState);
   };
@@ -132,6 +142,19 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   };
   const handleSaveChanges = async () => {
     if (!menu) return;
+    // Validation
+    for (const day of DAYS) {
+      for (const category of CATEGORIES) {
+        for (const item of menu.days[day][category]) {
+          if (!item.name.trim() || item.price <= 0) {
+            toast.warning(`Invalid item in ${day}, ${CATEGORY_TITLES[category]}`, {
+              description: 'All items must have a name and a price greater than 0.',
+            });
+            return;
+          }
+        }
+      }
+    }
     setIsSaving(true);
     try {
       await api('/api/menu', {
@@ -141,19 +164,35 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       });
       toast.success('Menu saved successfully!');
     } catch (error) {
-      toast.error('Failed to save menu. Your session might have expired.');
+      const errorMessage = error instanceof Error && error.message.includes('401')
+        ? 'Failed to save menu. Your session may have expired.'
+        : 'An unexpected error occurred while saving.';
+      errorReporter.report({
+        error,
+        source: 'AdminSaveMenu',
+        showToast: true,
+        message: errorMessage,
+      });
     } finally {
       setIsSaving(false);
     }
   };
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <Skeleton className="h-10 w-1/4 mb-4" />
-        <Skeleton className="h-12 w-full mb-8" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
+        <div className="flex justify-between items-center mb-8">
+          <Skeleton className="h-10 w-1/3" />
+          <div className="flex gap-4"><Skeleton className="h-10 w-48" /><Skeleton className="h-10 w-24" /></div>
+        </div>
+        <Skeleton className="h-12 w-full mb-6" />
         <div className="space-y-4">
-          <Skeleton className="h-48 w-full" />
-          <Skeleton className="h-48 w-full" />
+          {CATEGORIES.map(cat => (
+            <div key={cat} className="border rounded-lg p-4 space-y-4">
+              <Skeleton className="h-6 w-1/4" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -180,44 +219,46 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
             <TabsContent key={day} value={day} className="mt-6">
               <Accordion type="multiple" defaultValue={CATEGORIES} className="w-full space-y-4">
                 {CATEGORIES.map(category => (
-                  <AccordionItem key={category} value={category} className="border rounded-lg px-4">
-                    <AccordionTrigger className="text-xl font-semibold">{CATEGORY_TITLES[category]}</AccordionTrigger>
-                    <AccordionContent className="pt-4">
-                      <div className="space-y-4">
-                        {menu?.days[day]?.[category]?.map((item, index) => (
-                          <Card key={item.id} className="p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-8 gap-4 items-center">
-                              <Input
-                                placeholder="Item Name"
-                                value={item.name}
-                                onChange={e => handleItemChange(day, category, index, 'name', e.target.value)}
-                                className="md:col-span-3"
-                              />
-                              <Input
-                                placeholder="Description"
-                                value={item.description || ''}
-                                onChange={e => handleItemChange(day, category, index, 'description', e.target.value)}
-                                className="md:col-span-3"
-                              />
-                              <Input
-                                type="number"
-                                placeholder="Price"
-                                value={item.price}
-                                onChange={e => handleItemChange(day, category, index, 'price', e.target.value)}
-                                className="md:col-span-1"
-                              />
-                              <Button variant="ghost" size="icon" onClick={() => removeItem(day, category, index)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </Card>
-                        ))}
-                        <Button variant="outline" onClick={() => addItem(day, category)}>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Add Item to {CATEGORY_TITLES[category]}
-                        </Button>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
+                  <motion.div key={category} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                    <AccordionItem value={category} className="border rounded-lg px-4">
+                      <AccordionTrigger className="text-xl font-semibold">{CATEGORY_TITLES[category]}</AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <div className="space-y-4">
+                          {menu?.days[day]?.[category]?.map((item, index) => (
+                            <Card key={item.id} className="p-4">
+                              <div className="grid grid-cols-1 md:grid-cols-8 gap-4 items-center">
+                                <Input
+                                  placeholder="Item Name"
+                                  value={item.name}
+                                  onChange={e => handleItemChange(day, category, index, 'name', e.target.value)}
+                                  className="md:col-span-3"
+                                />
+                                <Input
+                                  placeholder="Description"
+                                  value={item.description || ''}
+                                  onChange={e => handleItemChange(day, category, index, 'description', e.target.value)}
+                                  className="md:col-span-3"
+                                />
+                                <Input
+                                  type="number"
+                                  placeholder="Price"
+                                  value={item.price}
+                                  onChange={e => handleItemChange(day, category, index, 'price', e.target.value)}
+                                  className="md:col-span-1"
+                                />
+                                <Button variant="ghost" size="icon" onClick={() => removeItem(day, category, index)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </Card>
+                          ))}
+                          <Button variant="outline" onClick={() => addItem(day, category)}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Item to {CATEGORY_TITLES[category]}
+                          </Button>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </motion.div>
                 ))}
               </Accordion>
             </TabsContent>

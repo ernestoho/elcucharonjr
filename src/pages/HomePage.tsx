@@ -143,10 +143,10 @@ export function HomePage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            <img 
-              src="https://placehold.co/128x128/F38020/FFFFFF?text=El+Cucharon+JR&font=roboto" 
-              alt="El Cucharon JR Logo" 
-              className="w-24 h-24 md:w-32 md:h-32 rounded-full mx-auto mb-4 shadow-lg" 
+            <img
+              src="https://ik.imagekit.io/l46c6n0qda/elcucharon-restaurant.png"
+              alt="El Cucharon JR Logo"
+              className="w-24 h-24 md:w-32 md:h-32 rounded-full mx-auto mb-4 shadow-lg"
             />
           </motion.div>
           <motion.h1

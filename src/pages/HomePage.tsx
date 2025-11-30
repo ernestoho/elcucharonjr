@@ -78,10 +78,7 @@ function getDefaultDay(): string {
 }
 const INITIAL_GUARNICION_STATE: GuarnicionSelection = { arroz: null, crema: null, ensalada: null };
 export function HomePage() {
-  // Guard against React module loading issues
-  if (typeof React === 'undefined') {
-    return <div>Loading...</div>;
-  }
+
   const [fullMenu, setFullMenu] = useState<{ days: Record<string, Record<string, MenuCategory>> } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(getDefaultDay);
@@ -100,7 +97,14 @@ export function HomePage() {
       } catch (error) {
         const message = 'Error al cargar el menú, usando datos de respaldo.';
         toast.error(message);
-        errorReporter.report({ message, error, source: 'HomePageFetch' });
+        errorReporter.report({
+          level: 'error',
+          url: (typeof window !== 'undefined' && window.location?.href) ? window.location.href : 'unknown',
+          timestamp: new Date().toISOString(),
+          message,
+          error,
+          source: 'HomePageFetch'
+        });
       } finally {
         setIsLoading(false);
       }
@@ -108,10 +112,31 @@ export function HomePage() {
     fetchMenu();
   }, []);
   const menuToUse = useMemo(() => {
-    return fullMenu?.days?.[selectedDay] ?? FALLBACK_MENU_DATA;
+    const dayData = fullMenu?.days?.[selectedDay];
+    if (!dayData || typeof dayData !== 'object') {
+      return FALLBACK_MENU_DATA;
+    }
+    // dayData is expected as Record<string, MenuItem[]>
+    const normalized: Record<string, MenuCategory> = {};
+    // Use known categories from FALLBACK_MENU_DATA to preserve titles
+    for (const key of Object.keys(FALLBACK_MENU_DATA)) {
+      const items = (dayData as Record<string, any>)[key];
+      if (Array.isArray(items)) {
+        normalized[key] = { title: FALLBACK_MENU_DATA[key].title, items };
+      } else {
+        normalized[key] = FALLBACK_MENU_DATA[key];
+      }
+    }
+    // Include any additional categories returned by the API
+    for (const [k, v] of Object.entries(dayData)) {
+      if (!normalized[k]) {
+        normalized[k] = { title: k, items: Array.isArray(v) ? v : [] };
+      }
+    }
+    return normalized;
   }, [fullMenu, selectedDay]);
-  const allMenuItems = useMemo(() => Object.values(menuToUse).flatMap(cat => cat.items), [menuToUse]);
-  const menuItemsMap = useMemo(() => new Map(allMenuItems.map(item => [item.id, item])), [allMenuItems]);
+  const allMenuItems = useMemo(() => Object.values(menuToUse).flatMap(cat => cat?.items ?? []), [menuToUse]);
+  const menuItemsMap = useMemo(() => new Map(allMenuItems.filter(Boolean).map(item => [item.id, item])), [allMenuItems]);
   const handleQuantityChange = useCallback((itemId: string, newQuantity: number) => {
     setOrderQuantities(prev => ({ ...prev, [itemId]: newQuantity }));
   }, []);

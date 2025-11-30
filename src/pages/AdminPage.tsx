@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trash2, PlusCircle, LogIn, Save, LogOut } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { errorReporter, ClientErrorReport } from '@/lib/errorReporter';
+import { errorReporter } from '@/lib/errorReporter';
 const AUTH_TOKEN_KEY = 'sazonlink-admin-token';
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const CATEGORIES = ["especial", "platoDelDia", "extras", "jugos"];
@@ -47,6 +47,9 @@ function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
       const message = 'Login failed. Please check your password.';
       toast.error(message);
       errorReporter.report({
+        level: 'error',
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+        timestamp: new Date().toISOString(),
         message,
         error,
         source: 'AdminLogin',
@@ -105,6 +108,9 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       const message = 'Failed to load menu data.';
       toast.error(message);
       errorReporter.report({
+        level: 'error',
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+        timestamp: new Date().toISOString(),
         message,
         error,
         source: 'AdminFetchMenu',
@@ -174,6 +180,9 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
         : 'An unexpected error occurred while saving.';
       toast.error(message);
       errorReporter.report({
+        level: 'error',
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+        timestamp: new Date().toISOString(),
         message,
         error,
         source: 'AdminSaveMenu',
@@ -275,10 +284,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   );
 }
 export function AdminPage() {
-  // Guard against React module loading issues
-  if (typeof React === 'undefined') {
-    return <div>Admin loading...</div>;
-  }
+
   const [token, setToken] = useState<string | null>(() => {
     try {
       return localStorage.getItem(AUTH_TOKEN_KEY);
